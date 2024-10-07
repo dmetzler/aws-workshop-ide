@@ -7,6 +7,7 @@ import { Construct } from 'constructs';
 
 interface WorkshopIdeStackProps extends cdk.StackProps {
   clientIp: string;
+  userName: string;
   publicKeyPath?: string;  
   instanceClass?: ec2.InstanceClass;
   instanceSize?: ec2.InstanceSize;
@@ -49,10 +50,10 @@ export class AwsWorkshopIdeStack extends cdk.Stack {
       ]
     }) 
     
-
+    const sshKeyPairContent = fs.readFileSync(props.publicKeyPath).toString()
     const sshKeyPair = new ec2.CfnKeyPair(this, 'workshop-ssh-key', {
       keyName: 'workshop-ssh-key',
-      publicKeyMaterial: fs.readFileSync(props.publicKeyPath).toString()
+      publicKeyMaterial: sshKeyPairContent
     })
 
     // Create Security group
@@ -69,8 +70,8 @@ export class AwsWorkshopIdeStack extends cdk.Stack {
     const instance = new ec2.Instance(this, 'workshop-instance', {
       vpc: defaultVpc,
       instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.T2, 
-        ec2.InstanceSize.MICRO
+        props.instanceClass, 
+        props.instanceSize
       ),
       machineImage: new ec2.AmazonLinux2023ImageSsmParameter(),
       vpcSubnets: { 
@@ -81,10 +82,11 @@ export class AwsWorkshopIdeStack extends cdk.Stack {
         keyPairName: sshKeyPair.keyName,
         type: ec2.KeyPairType.RSA,
       }),
-      userData: ec2.UserData.custom(`
-        #!/bin/bash
-        mkdir -p /home/ec2-user/environment
-        chown ec2-user:ec2-user /home/ec2-user/environment
+      userData: ec2.UserData.custom(`#!/bin/bash
+        sudo yum install -y git python
+        python -m ensurepip --upgrade
+        mkdir -p /home/ec2-user/environment        
+        chown -R ec2-user:ec2-user /home/ec2-user/
       `),
       securityGroup: securityGroup
     })

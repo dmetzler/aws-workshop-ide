@@ -7,26 +7,19 @@ const app = new cdk.App();
 
   // Get current computer public IP
 fetch('https://api.ipify.org?format=text').then( response => {
-  response.text().then( clientIp => {
-
-
-    let stack = new AwsWorkshopIdeStack(app, 'AwsWorkshopIdeStack', {
+  response.text()
+  .then( clientIp => {
+    new AwsWorkshopIdeStack(app, 'AwsWorkshopIdeStack', {
       env: { 
         account: process.env.CDK_DEFAULT_ACCOUNT, 
         region: process.env.CDK_DEFAULT_REGION 
       },    
-      clientIp: clientIp
+      clientIp: clientIp,
+      userName: process.env.USER!
     })
-
-    // console.log("Please add the following in your ~/.ssh/config file ")
-    // console.log("")
-    // console.log("-----  ~/.ssh/config file  ---------------------")
-    // console.log(`Host ${stack.instance.instancePublicDnsName}`)
-    // console.log("    User ec2-user")
-    // console.log("------------------------------------------------")
-    // console.log("")
-    // console.log("Then you can start you remote IDE")
-
-
+  })
+  .catch( err => {
+    console.log(`Unable to get public IP of client:  ${err}`)
   });
 });
+
